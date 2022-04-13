@@ -22,40 +22,17 @@ if this happens or you need a human response, please let us know by adding the t
 \n
 """
 
-# Keywords and corresponding category flags
-KEYWORDS = {
-    # DRS
-    "drs": ["register", "drs"],
-
-    # Ban appeal
-    "ban_appeal": ["banned", "why", "fuck", "ban", "restore", "banning", "was ban", "appeal", "reinstate", "why was I"],
-
-    # Post removal appeal
-    "post_appeal": ["delete", "mod", "post", "restore", "reinstate", "comment", "I don't understand why",
-                    "my post was removed"],
-
-    # Reporting FUD/shills
-    "report_user": ["reporting", "shill", "FUD", "review", "should be looked", "user", "found a shill"],
-    # human review?
-
-    # SATORI
-    "satori": ["satori", "thanks", "approval", "apeprove", "!apeprove!"],
-
-    # Karma appeals
-    "karma": ["lurker", "superstonk", "engage", "post", "posted", "exception", "asking for an exception", "karma",
-              "feed the", "DRS Bot", "not enough", "approval", "to post"],
-
-    # Special cases
-    "human": ["<hanami:human>"],
-    "test": ["<hanami:test>"]
-}
-
-# Category flags and corresponding appends
-# (text to be appended if message is in corresponding category)
-APPENDS = {
-    "drs": "",  # TBD: poke luma
-    "ban_appeal":
-        """
+DATABASE = [
+    {
+        "category": "drs",
+        "keywords": ["register", "drs"],
+        "response": "",
+    },
+    {
+        "category": "ban_appeal",
+        "keywords": ["banned", "why", "fuck", "ban", "restore", "banning", "was ban", "appeal", "reinstate",
+                     "why was I"],
+        "response":         """
         **BAN APPEAL**
         \n
         We've detected that your message is about being banned from participating in the sub, so we've prepared an initial response you may find helpful that addresses many common questions we see below.
@@ -75,9 +52,12 @@ APPENDS = {
         If your account is confirmed to be permanently or temporarily banned for a violation of the sub's rules, the ban will not be overturned unless the mod team determines that the rule was inaccurately or unfairly applied.
         \n
         """,
-
-    "post_appeal":
-        """
+    },
+    {
+        "category": "post_appeal",
+        "keywords": ["delete", "mod", "post", "restore", "reinstate", "comment", "I don't understand why",
+                     "my post was removed"],
+        "response":         """
         Mods will almost always pin a comment or submit a private message to the OP with the Removal Reason. Please make sure you check for such communication before you send the mods any messages.
         
         It is our goal to create a safe, inclusive, and healthy environment for all. We come across a lot of posts that break the rules of Superstonk – they could promote FUD (Fear, uncertainty or doubt), are spam, contain demonstrably false information, or are otherwise inappropriate for the sub.
@@ -88,9 +68,11 @@ APPENDS = {
         
         If you haven’t already, please send us a link to the specific post or comment that was removed with your specific rebuttal, and we will take action towards restoring the post, if it is in the best interest of the community to do so.
         """,
-
-    "report_user":
-        """
+    },
+    {
+        "category": "report_user",
+        "keywords": ["reporting", "shill", "FUD", "review", "should be looked", "user", "found a shill"],
+        "response":         """
         **REPORT USER**
         \n
         We've detected that you might be reaching out to the mod team to report a user, post, or comment that appears out of place. Maybe you’ve identified a user with a shilly post history, somebody spamming something unrelated to GME in comments, or generally violating the “ape don’t fight ape” rule.
@@ -112,9 +94,12 @@ APPENDS = {
         https://www.reddit.com/r/Superstonk/wiki/index - Superstonk Wiki
         \n
         """,
-
-    "satori":
-        """
+        # human review?
+    },
+    {
+        "category": "satori",
+        "keywords": ["satori", "thanks", "approval", "apeprove", "!apeprove!"],
+        "response":         """
         \n
         **SATORI**
         \n
@@ -143,8 +128,12 @@ APPENDS = {
         As a reminder, the easiest way to get a fast track to approval is to type !apeprove! in the comments anywhere on the sub.
         """,
 
-    "karma":
-        """
+    },
+    {
+        "category": "karma",
+        "keywords": ["lurker", "superstonk", "engage", "post", "posted", "exception", "asking for an exception",
+                     "karma", "feed the", "DRS Bot", "not enough", "approval", "to post"],
+        "response":         """
         \n
         **KARMA**
         \n
@@ -171,28 +160,32 @@ APPENDS = {
         How to get Karma on Reddit - https://zapier.com/blog/how-to-get-karma-on-reddit/
         """,
 
-    # Special cases, NOT for normal use
-
-    "test":
-        """
-        **TEST REPLY**
-        \n
-        haha bot go brrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-        \n
-        hanami wörks, now pls moon or i eat you kthxbai
-        """,
-
-    "human":
-
-        """
+    },
+    {
+        "category": "human",
+        "keywords": ["<hanami:human>"],
+        "response":         """
         
         **HUMAN REVIEW**
         \n
         Review registration received.
         \n
         Your message will be reviewed by a human moderator - note that waiting times may vary significantly.
+        """,
+
+    },
+    {
+        "category": "test",
+        "keywords": ["<hanami:test>"],
+        "response":         """
+        **TEST REPLY**
+        \n
+        haha bot go brrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
+        \n
+        hanami wörks, now pls moon or i eat you kthxbai
         """
-}
+    }
+]
 
 # To be added after appends
 POSTSCRIPT = """
@@ -217,12 +210,27 @@ def authenticate():
                        user_agent="desktop:superstonk.hanami:v2.0.1 (by r/superstonk mods)")
 
 
+def find_msg_flags(msg_text):
+    msg_text = msg_text.lower()
+    msg_flags = set()  # DO NOT use a list, lest we have a re-run of the duplicate bug
+    for entry in DATABASE:
+        for kw in entry['keywords']:
+            if kw in msg_text:
+                msg_flags.add(entry['category'])
+    print("Category flags:", str(msg_flags))
+    # If no appropriate categories are found, use human review
+    if len(msg_flags) == 0:
+        msg_flags.add("human")
+    return msg_flags
+
 def generate_reply(msg_flags):
     reply = BASE_REPLY
 
     if len(msg_flags) > 0:
         for flag in msg_flags:
-            reply += str(APPENDS[flag])
+            for entry in DATABASE:
+                if flag == entry['category']:
+                    reply += str(entry['response'])
         reply += POSTSCRIPT
     return reply
 
@@ -259,21 +267,7 @@ def print_modmail():
             #     c.archive()
 
 
-def find_msg_flags(msg_text):
-    msg_text = msg_text.lower()
-    msg_flags = set()  # DO NOT use a list, lest we have a re-run of the duplicate bug
-    # Map keywords to flags
-    for category in KEYWORDS:
-        for kw in KEYWORDS.get(category):
-            if kw in msg_text:
-                msg_flags.add(category)
-    print("Category flags:", str(msg_flags))
-    # If no appropriate categories are found, use human review
-    if len(msg_flags) == 0:
-        msg_flags.add("human")
-    return msg_flags
-
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    print_modmail()
+    for entry in DATABASE:
+        print(entry)
