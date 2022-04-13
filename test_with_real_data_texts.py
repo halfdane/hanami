@@ -1,10 +1,12 @@
 import unittest
-from hanami import find_msg_flags, generate_reply
+from hanami import Hanami, DATABASE
 
 
 class HanamiTest(unittest.TestCase):
 
     def test_should_identify_karma_and_post_appeal_flags(self):
+        testee = Hanami(DATABASE)
+
         karma_post_appeal = [
                              """ https://www.reddit.com/r/Superstonk/comments/u2b3ei/wtf_tda_spinoff_need/
                  
@@ -35,10 +37,12 @@ class HanamiTest(unittest.TestCase):
                              back up."""]
         for message in karma_post_appeal:
             with self.subTest():
-                flags = find_msg_flags(message)
+                flags = testee.find_msg_flags(message)
                 self.assertEqual(flags, {'karma', 'post_appeal'})
 
     def test_should_identify_concatenate_correct_message(self):
+        testee = Hanami(DATABASE)
+
         expected = """
 Thanks for reaching out to the mod team of r/Superstonk!
 
@@ -114,7 +118,7 @@ https://www.reddit.com/r/Superstonk/wiki/index/faq - Superstonk FAQ
 
 https://www.reddit.com/r/Superstonk/wiki/index - Superstonk Wiki
 """
-        actual = generate_reply(['karma', 'post_appeal'])
+        actual = testee.generate_reply(['karma', 'post_appeal'])
         self.maxDiff = None
         self.assertEqual(actual, expected)
 

@@ -202,72 +202,79 @@ https://www.reddit.com/r/Superstonk/wiki/index - Superstonk Wiki
 """
 
 
-def authenticate():
-    return praw.Reddit(username=os.environ["reddit_username"],
-                       password=os.environ["reddit_password"],
-                       client_id=os.environ["reddit_client_id"],
-                       client_secret=os.environ["reddit_client_secret"],
-                       user_agent="desktop:superstonk.hanami:v2.0.1 (by r/superstonk mods)")
+class Hanami:
+    def __init__(self, database, reddit=None):
+        self.database = database
+        self.reddit = reddit
 
+    def authenticate(self):
+        return praw.Reddit(username=os.environ["reddit_username"],
+                           password=os.environ["reddit_password"],
+                           client_id=os.environ["reddit_client_id"],
+                           client_secret=os.environ["reddit_client_secret"],
+                           user_agent="desktop:superstonk.hanami:v2.0.1 (by r/superstonk mods)")
 
-def find_msg_flags(msg_text):
-    msg_text = msg_text.lower()
-    msg_flags = set()  # DO NOT use a list, lest we have a re-run of the duplicate bug
-    for entry in DATABASE:
-        for kw in entry['keywords']:
-            if kw in msg_text:
-                msg_flags.add(entry['category'])
-    print("Category flags:", str(msg_flags))
-    # If no appropriate categories are found, use human review
-    if len(msg_flags) == 0:
-        msg_flags.add("human")
-    return msg_flags
+    def find_msg_flags(self, msg_text):
+        msg_text = msg_text.lower()
+        msg_flags = set()  # DO NOT use a list, lest we have a re-run of the duplicate bug
+        for entry in self.database:
+            for kw in entry['keywords']:
+                if kw.lower() in msg_text:
+                    msg_flags.add(entry['category'])
 
-def generate_reply(msg_flags):
-    reply = BASE_REPLY
+        # If no appropriate categories are found, use human review
+        if len(msg_flags) == 0:
+            msg_flags.add("human")
+        return msg_flags
 
-    if len(msg_flags) > 0:
-        for flag in msg_flags:
-            for entry in DATABASE:
-                if flag == entry['category']:
-                    reply += str(entry['response'])
-        reply += POSTSCRIPT
-    return reply
+    def generate_reply(self, msg_flags):
+        reply = BASE_REPLY
 
+        if len(msg_flags) > 0:
+            for flag in msg_flags:
+                for entry in self.database:
+                    if flag == entry['category']:
+                        reply += str(entry['response'])
+            reply += POSTSCRIPT
+        return reply
 
-def print_modmail():
-    print("Authenticating...")
-    r = authenticate()
-    print("Authentication successful.")
-    print(f'Current user is {r.user.me()}')
+    def print_modmail(self):
+        subreddit = self.reddit.subreddit(SUBREDDIT)
+        convos = subreddit.modmail.conversations(state="new")
 
-    subreddit = r.subreddit(SUBREDDIT)
-    convos = subreddit.modmail.conversations(state="new")
+        for c in convos:
+            for msg in c.messages:
+                msg_text = msg.body_markdown  # ApeSpeak NLP parser from SATORI to be added once adjustments are made
+                msg_flags = self.find_msg_flags(msg_text)
+                reply = self.generate_reply(msg_flags)
 
-    for c in convos:
-        for msg in c.messages:
-            msg_text = msg.body_markdown  # ApeSpeak NLP parser from SATORI to be added once adjustments are made
-            msg_flags = find_msg_flags(msg_text)
-            reply = generate_reply(msg_flags)
+                _logger.debug(f"""user: {msg.author}  
+                message: {msg.body_markdown}
+                --- 
+                flags: {msg_flags}
+                --- """)
 
-            _logger.debug(f"""user: {msg.author}  
-            message: {msg.body_markdown}
-            --- 
-            flags: {msg_flags}
-            reply: {reply}
-            --- """)
-
-            # print(reply)
-            # c.reply(reply, author_hidden=True)
-            #
-            # if "human" in msg_flags:
-            #     print("Human review, not archiving")
-            # else:
-            #     print("Archiving")
-            #     c.archive()
+                # print(reply)
+                # c.reply(reply, author_hidden=True)
+                #
+                # if "human" in msg_flags:
+                #     print("Human review, not archiving")
+                # else:
+                #     print("Archiving")
+                #     c.archive()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    for entry in DATABASE:
-        print(entry)
+
+    print("Authenticating...")
+    reddit = praw.Reddit(username=os.environ["reddit_username"],
+                           password=os.environ["reddit_password"],
+                           client_id=os.environ["reddit_client_id"],
+                           client_secret=os.environ["reddit_client_secret"],
+                           user_agent="desktop:superstonk.hanami:v2.0.1 (by r/superstonk mods)")
+
+    print("Authentication successful.")
+    print(f'Current user is {reddit.user.me()}')
+
+    Hanami(DATABASE, reddit).print_modmail()
