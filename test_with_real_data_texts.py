@@ -36,7 +36,7 @@ class HanamiTest(unittest.TestCase):
                              to score an extra 8 shares by the time CS landed my shares. Anyways. Please put my post 
                              back up."""]
         for message in karma_post_appeal:
-            with self.subTest():
+            with self.subTest(msg=message):
                 flags = testee.find_msg_flags(message)
                 self.assertEqual(flags, {'karma', 'post_appeal'})
 
