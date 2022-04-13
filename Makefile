@@ -4,6 +4,10 @@ SHELL := /bin/bash
 run: venv
 	./venv/bin/python hanami.py
 
+.PHONY: test
+test: venv
+	./venv/bin/python -m unittest discover
+
 venv: venv/bin/activate
 
 venv/bin/activate: requirements.txt

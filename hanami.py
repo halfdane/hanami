@@ -242,29 +242,33 @@ def print_modmail():
         for msg in c.messages:
             print(msg.author, "\n", msg.body_markdown, "\n\n---\n") # DEBUG
 
-            msg_text = msg.body_markdown.lower() # ApeSpeak NLP parser from SATORI to be added once adjustments are made
-            msg_flags = set() # DO NOT use a list, lest we have a re-run of the duplicate bug
-
-            # Map keywords to flags
-            for category in KEYWORDS:
-                for kw in KEYWORDS.get(category):
-                    if kw in msg_text:
-                        msg_flags.add(category)
-            print("Category flags:", str(msg_flags))
-
-            # If no appropriate categories are found, use human review
-            if len(msg_flags) == 0:
-                msg_flags.add("human")
+            msg_text = msg.body_markdown  # ApeSpeak NLP parser from SATORI to be added once adjustments are made
+            msg_flags = find_msg_flags(msg_text)
             reply = generate_reply(msg_flags)
+            #
+            # print(reply)
+            # c.reply(reply, author_hidden=True)
+            #
+            # if "human" in msg_flags:
+            #     print("Human review, not archiving")
+            # else:
+            #     print("Archiving")
+            #     c.archive()
 
-            print(reply)
-            c.reply(reply, author_hidden=True)
 
-            if "human" in msg_flags:
-                print("Human review, not archiving")
-            else:
-                print("Archiving")
-                c.archive()
+def find_msg_flags(msg_text):
+    msg_text = msg_text.lower()
+    msg_flags = set()  # DO NOT use a list, lest we have a re-run of the duplicate bug
+    # Map keywords to flags
+    for category in KEYWORDS:
+        for kw in KEYWORDS.get(category):
+            if kw in msg_text:
+                msg_flags.add(category)
+    print("Category flags:", str(msg_flags))
+    # If no appropriate categories are found, use human review
+    if len(msg_flags) == 0:
+        msg_flags.add("human")
+    return msg_flags
 
 
-print_modmail()
+# print_modmail()
