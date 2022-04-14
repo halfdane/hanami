@@ -4,16 +4,26 @@ from hanami import Hanami
 
 class HanamiUnitTest(unittest.TestCase):
 
+
+    def mock_wiki_response(self):
+        return {
+            'base': {
+                'introduction': 'some introduction ',
+                'postscript': ' a goodbye message'
+            },
+            'types': {
+                'karma': {
+                    'keywords': ["first word for karma", "secondKarmaWord"],
+                    'response': "",
+                },
+                'post_appeal': {
+                    'keywords': ["appealing", "something else to appeal"],
+                    'response': "",
+                },
+            }}
+
     def test_should_identify_multiple_flags(self):
-        testee = Hanami([{
-            "category": "karma",
-            "keywords": ["first word for karma", "secondKarmaWord"],
-            "response": "",
-        }, {
-            "category": "post_appeal",
-            "keywords": ["appealing", "something else to appeal"],
-            "response": "",
-        }])
+        testee = Hanami()
 
         input_strings = [
             """ appealing
@@ -25,19 +35,11 @@ class HanamiUnitTest(unittest.TestCase):
         ]
         for message in input_strings:
             with self.subTest(msg=message):
-                flags = testee.find_msg_flags(message)
+                flags = testee.find_msg_flags(self.mock_wiki_response(), message)
                 self.assertEqual(flags, {'karma', 'post_appeal'})
 
     def test_should_fall_back_to_human_if_nothing_fits(self):
-        testee = Hanami([{
-            "category": "karma",
-            "keywords": ["first word for karma", "secondKarmaWord"],
-            "response": "",
-        }, {
-            "category": "post_appeal",
-            "keywords": ["appealing", "somthing else to appeal"],
-            "response": "",
-        }])
+        testee = Hanami()
 
         input_strings = [
             "first word for something",
@@ -47,7 +49,7 @@ class HanamiUnitTest(unittest.TestCase):
         ]
         for message in input_strings:
             with self.subTest():
-                flags = testee.find_msg_flags(message)
+                flags = testee.find_msg_flags(self.mock_wiki_response(), message)
                 self.assertEqual(flags, {"human"})
 
 
